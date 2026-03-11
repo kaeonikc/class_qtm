@@ -1,10 +1,13 @@
 /** @file background.c Documented background module
  *
- * * Julien Lesgourgues, 17.04.2011
- * * routines related to ncdm written by T. Tram in 2011
- * * new integration scheme written by N. Schoeneberg in 2020
- *
- * Deals with the cosmological background evolution.
+ * Prototypes for Quintom potential functions
+ */
+struct background;
+double V_qtm(struct background *pba, double phi);
+double dV_qtm(struct background *pba, double phi);
+double ddV_qtm(struct background *pba, double phi);
+
+/**
  * This module has two purposes:
  *
  * - at the beginning, to initialize the background, i.e. to integrate
@@ -404,6 +407,9 @@ int background_functions(
      p_prime = a_prime_over_a * dp_dloga = a_prime_over_a * Sum [ (w_prime/a_prime_over_a -3(1+w)w)rho].
      Note: The scalar field contribution must be added in the end, as an exception!*/
   double dp_dloga;
+  /* Quintom quantities */
+  double phi_qtm, phi_prime_qtm, sigma_qtm, sigma_prime_qtm, V_phi, dV_phi,
+      ddV_phi;
 
   /** - initialize local variables */
   rho_tot = 0.;
@@ -429,14 +435,24 @@ int background_functions(
   rho_r += pvecback[pba->index_bg_rho_g];
 
   /* baryons */
-  pvecback[pba->index_bg_rho_b] = pba->Omega0_b * pow(pba->H0,2) / pow(a,3);
+  if (pba->has_qtm == _TRUE_ && pba->coupled_baryon_qtm == _TRUE_) {
+    sigma_qtm = pvecback_B[pba->index_bi_sigma_qtm];
+    pvecback[pba->index_bg_rho_b] = pba->Kb_qtm * exp(pba->delta_qtm * sigma_qtm) * pow(a, -3);
+  } else {
+    pvecback[pba->index_bg_rho_b] = pba->Omega0_b * pow(pba->H0, 2) / pow(a, 3);
+  }
   rho_tot += pvecback[pba->index_bg_rho_b];
   p_tot += 0;
   rho_m += pvecback[pba->index_bg_rho_b];
 
   /* cdm */
   if (pba->has_cdm == _TRUE_) {
-    pvecback[pba->index_bg_rho_cdm] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3);
+    if (pba->has_qtm == _TRUE_ && pba->coupled_cdm_qtm == _TRUE_) {
+      sigma_qtm = pvecback_B[pba->index_bi_sigma_qtm];
+      pvecback[pba->index_bg_rho_cdm] = pba->Kcdm_qtm * exp(pba->delta_qtm * sigma_qtm) * pow(a, -3);
+    } else {
+      pvecback[pba->index_bg_rho_cdm] = pba->Omega0_cdm * pow(pba->H0, 2) / pow(a, 3);
+    }
     rho_tot += pvecback[pba->index_bg_rho_cdm];
     p_tot += 0.;
     rho_m += pvecback[pba->index_bg_rho_cdm];
@@ -487,6 +503,42 @@ int background_functions(
     rho_r += 3.*pvecback[pba->index_bg_p_scf]; //field pressure contributes radiation
     rho_m += pvecback[pba->index_bg_rho_scf] - 3.* pvecback[pba->index_bg_p_scf]; //the rest contributes matter
     //printf(" a= %e, Omega_scf = %f, \n ",a, pvecback[pba->index_bg_rho_scf]/rho_tot );
+  }
+
+  /* Quintom model */
+  if (pba->has_qtm == _TRUE_) {
+    phi_qtm = pvecback_B[pba->index_bi_phi_qtm];
+    phi_prime_qtm = pvecback_B[pba->index_bi_phi_prime_qtm];
+    sigma_qtm = pvecback_B[pba->index_bi_sigma_qtm];
+    sigma_prime_qtm = pvecback_B[pba->index_bi_sigma_prime_qtm];
+
+    pvecback[pba->index_bg_phi_qtm] = phi_qtm;
+    pvecback[pba->index_bg_phi_prime_qtm] = phi_prime_qtm;
+    pvecback[pba->index_bg_sigma_qtm] = sigma_qtm;
+    pvecback[pba->index_bg_sigma_prime_qtm] = sigma_prime_qtm;
+
+    V_phi = V_qtm(pba, phi_qtm);
+    dV_phi = dV_qtm(pba, phi_qtm);
+    ddV_phi = ddV_qtm(pba, phi_qtm);
+
+    pvecback[pba->index_bg_V_qtm] = V_phi;
+    pvecback[pba->index_bg_dV_qtm] = dV_phi;
+    pvecback[pba->index_bg_ddV_qtm] = ddV_phi;
+
+    /* Energy density and pressure */
+    /* rho_phi = phi_prime^2 / (2a^2) + V(phi) */
+    pvecback[pba->index_bg_rho_phi_qtm] = (phi_prime_qtm * phi_prime_qtm / (2. * a * a) + V_phi) / 3.;
+    pvecback[pba->index_bg_p_phi_qtm] = (phi_prime_qtm * phi_prime_qtm / (2. * a * a) - V_phi) / 3.;
+
+    /* rho_sigma = -sigma_prime^2 / (2a^2) (Phantom kinetic term is negative) */
+    pvecback[pba->index_bg_rho_sigma_qtm] = (-sigma_prime_qtm * sigma_prime_qtm / (2. * a * a)) / 3.;
+    pvecback[pba->index_bg_p_sigma_qtm] = (-sigma_prime_qtm * sigma_prime_qtm / (2. * a * a)) / 3.;
+
+    pvecback[pba->index_bg_rho_qtm] = pvecback[pba->index_bg_rho_phi_qtm] + pvecback[pba->index_bg_rho_sigma_qtm];
+    pvecback[pba->index_bg_p_qtm] = pvecback[pba->index_bg_p_phi_qtm] + pvecback[pba->index_bg_p_sigma_qtm];
+
+    rho_tot += pvecback[pba->index_bg_rho_qtm];
+    p_tot += pvecback[pba->index_bg_p_qtm];
   }
 
   /* ncdm */
@@ -1006,6 +1058,9 @@ int background_indices(
   if (pba->Omega0_scf != 0.)
     pba->has_scf = _TRUE_;
 
+  if (pba->Omega0_qtm != 0.)
+    pba->has_qtm = _TRUE_;
+
   if (pba->Omega0_lambda != 0.)
     pba->has_lambda = _TRUE_;
 
@@ -1072,6 +1127,21 @@ int background_indices(
   class_define_index(pba->index_bg_rho_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_p_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_p_prime_scf,pba->has_scf,index_bg,1);
+
+  /* - indices for Quintom fields */
+  class_define_index(pba->index_bg_phi_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_phi_prime_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_sigma_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_sigma_prime_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_V_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_dV_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_ddV_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_rho_phi_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_p_phi_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_rho_sigma_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_p_sigma_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_rho_qtm, pba->has_qtm, index_bg, 1);
+  class_define_index(pba->index_bg_p_qtm, pba->has_qtm, index_bg, 1);
 
   /* - index for Lambda */
   class_define_index(pba->index_bg_rho_lambda,pba->has_lambda,index_bg,1);
@@ -1168,6 +1238,12 @@ int background_indices(
   /* -> scalar field and its derivative wrt conformal time (Zuma) */
   class_define_index(pba->index_bi_phi_scf,pba->has_scf,index_bi,1);
   class_define_index(pba->index_bi_phi_prime_scf,pba->has_scf,index_bi,1);
+
+  /* -> integrated variables for Quintom */
+  class_define_index(pba->index_bi_phi_qtm, pba->has_qtm, index_bi, 1);
+  class_define_index(pba->index_bi_phi_prime_qtm, pba->has_qtm, index_bi, 1);
+  class_define_index(pba->index_bi_sigma_qtm, pba->has_qtm, index_bi, 1);
+  class_define_index(pba->index_bi_sigma_prime_qtm, pba->has_qtm, index_bi, 1);
 
   /* End of {B} variables */
   pba->bi_B_size = index_bi;
@@ -2292,6 +2368,23 @@ int background_initial_conditions(
                pvecback_integration[pba->index_bi_phi_scf]);
   }
 
+  if (pba->has_qtm == _TRUE_) {
+    /* Initial conditions for Quintom fields */
+    /* Phi (Quintessence) attractor */
+    pvecback_integration[pba->index_bi_phi_qtm] =
+        -1. / pba->lambda_qtm *
+        log(rho_rad * 4. / (3. * pba->lambda_qtm * pba->lambda_qtm - 12.));
+    if (3. * pba->lambda_qtm * pba->lambda_qtm - 12. < 0) {
+      pvecback_integration[pba->index_bi_phi_qtm] = 1. / pba->lambda_qtm;
+    }
+    pvecback_integration[pba->index_bi_phi_prime_qtm] =
+        2. * a * sqrt(V_qtm(pba, pvecback_integration[pba->index_bi_phi_qtm]));
+
+    /* Sigma (Phantom) field: starts at 0 */
+    pvecback_integration[pba->index_bi_sigma_qtm] = 0.;
+    pvecback_integration[pba->index_bi_sigma_prime_qtm] = 0.;
+  }
+
   /* Infer pvecback from pvecback_integration */
   class_call(background_functions(pba, a, pvecback_integration, normal_info, pvecback),
              pba->error_message,
@@ -2467,6 +2560,16 @@ int background_output_titles(
   class_store_columntitle(titles,"V'_scf",pba->has_scf);
   class_store_columntitle(titles,"V''_scf",pba->has_scf);
 
+  class_store_columntitle(titles, "(.)rho_qtm", pba->has_qtm);
+  class_store_columntitle(titles, "(.)p_qtm", pba->has_qtm);
+  class_store_columntitle(titles, "phi_qtm", pba->has_qtm);
+  class_store_columntitle(titles, "phi'_qtm", pba->has_qtm);
+  class_store_columntitle(titles, "sigma_qtm", pba->has_qtm);
+  class_store_columntitle(titles, "sigma'_qtm", pba->has_qtm);
+  class_store_columntitle(titles, "V_qtm", pba->has_qtm);
+  class_store_columntitle(titles, "dV_qtm", pba->has_qtm);
+  class_store_columntitle(titles, "ddV_qtm", pba->has_qtm);
+
   class_store_columntitle(titles,"(.)rho_tot",_TRUE_);
   class_store_columntitle(titles,"(.)p_tot",_TRUE_);
   class_store_columntitle(titles,"(.)p_tot_prime",_TRUE_);
@@ -2542,6 +2645,16 @@ int background_output_data(
     class_store_double(dataptr,pvecback[pba->index_bg_V_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_dV_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_ddV_scf],pba->has_scf,storeidx);
+
+    class_store_double(dataptr, pvecback[pba->index_bg_rho_qtm], pba->has_qtm, storeidx);
+    class_store_double(dataptr, pvecback[pba->index_bg_p_qtm], pba->has_qtm, storeidx);
+    class_store_double(dataptr, pvecback[pba->index_bg_phi_qtm], pba->has_qtm, storeidx);
+    class_store_double(dataptr, pvecback[pba->index_bg_phi_prime_qtm], pba->has_qtm, storeidx);
+    class_store_double(dataptr, pvecback[pba->index_bg_sigma_qtm], pba->has_qtm, storeidx);
+    class_store_double(dataptr, pvecback[pba->index_bg_sigma_prime_qtm], pba->has_qtm, storeidx);
+    class_store_double(dataptr, pvecback[pba->index_bg_V_qtm], pba->has_qtm, storeidx);
+    class_store_double(dataptr, pvecback[pba->index_bg_dV_qtm], pba->has_qtm, storeidx);
+    class_store_double(dataptr, pvecback[pba->index_bg_ddV_qtm], pba->has_qtm, storeidx);
 
     class_store_double(dataptr,pvecback[pba->index_bg_rho_tot],_TRUE_,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_p_tot],_TRUE_,storeidx);
@@ -2667,8 +2780,33 @@ int background_derivs(
     dy[pba->index_bi_phi_prime_scf] = - 2*y[pba->index_bi_phi_prime_scf] - a*dV_scf(pba,y[pba->index_bi_phi_scf])/H ;
   }
 
-  return _SUCCESS_;
+  /** Quintessence and Phantom fields  */
+  if (pba->has_qtm == _TRUE_) {
+    H = pvecback[pba->index_bg_H];
 
+    /* Quintessence field: phi */
+    dy[pba->index_bi_phi_qtm] = y[pba->index_bi_phi_prime_qtm] / a / H;
+    dy[pba->index_bi_phi_prime_qtm] = -2 * y[pba->index_bi_phi_prime_qtm] - a * dV_qtm(pba, y[pba->index_bi_phi_qtm]) / H;
+
+    /* Phantom field: sigma */
+    dy[pba->index_bi_sigma_qtm] = y[pba->index_bi_sigma_prime_qtm] / a / H;
+
+    /* Phantom KG equation with matter source term */
+    /* sigma'' + 2aH sigma' = 3 a^2 delta rho_m_coupled_class */
+    /* dsigma'/dlna = -2 sigma' + 3 (a/H) delta rho_m_coupled_class */
+    rho_M = 0.;
+    if (pba->coupled_baryon_qtm == _TRUE_) {
+      rho_M += pvecback[pba->index_bg_rho_b];
+    }
+    if (pba->has_cdm == _TRUE_ && pba->coupled_cdm_qtm == _TRUE_) {
+      rho_M += pvecback[pba->index_bg_rho_cdm];
+    }
+
+    dy[pba->index_bi_sigma_prime_qtm] = -2 * y[pba->index_bi_sigma_prime_qtm] +
+                                        3. * a * pba->delta_qtm * rho_M / H;
+  }
+
+  return _SUCCESS_;
 }
 
 /**
@@ -2844,7 +2982,7 @@ int background_output_budget(
       budget_radiation+=pba->Omega0_idr;
     }
 
-    if ((pba->has_lambda == _TRUE_) || (pba->has_fld == _TRUE_) || (pba->has_scf == _TRUE_) || (pba->has_curvature == _TRUE_)) {
+    if ((pba->has_lambda == _TRUE_) || (pba->has_fld == _TRUE_) || (pba->has_scf == _TRUE_) || (pba->has_qtm == _TRUE_) || (pba->has_curvature == _TRUE_)) {
       printf(" ---> Other Content \n");
     }
     if (pba->has_lambda == _TRUE_) {
@@ -2859,6 +2997,10 @@ int background_output_budget(
       class_print_species("Scalar Field",scf);
       budget_other+=pba->Omega0_scf;
     }
+    if (pba->has_qtm == _TRUE_) {
+      class_print_species("Quintom model", qtm);
+      budget_other += pba->Omega0_qtm;
+    }
     if (pba->has_curvature == _TRUE_) {
       class_print_species("Spatial Curvature",k);
       budget_other+=pba->Omega0_k;
@@ -2871,7 +3013,7 @@ int background_output_budget(
       printf(" - Non-Free-Streaming Matter      Omega = %-15g , omega = %-15g \n",pba->Omega0_nfsm,pba->Omega0_nfsm*pba->h*pba->h);
       printf(" - Non-Cold Dark Matter           Omega = %-15g , omega = %-15g \n",budget_neutrino,budget_neutrino*pba->h*pba->h);
     }
-    if ((pba->has_lambda == _TRUE_) || (pba->has_fld == _TRUE_) || (pba->has_scf == _TRUE_) || (pba->has_curvature == _TRUE_)) {
+    if ((pba->has_lambda == _TRUE_) || (pba->has_fld == _TRUE_) || (pba->has_scf == _TRUE_) || (pba->has_qtm == _TRUE_) || (pba->has_curvature == _TRUE_)) {
       printf(" Other Content                    Omega = %-15g , omega = %-15g \n",budget_other,budget_other*pba->h*pba->h);
     }
     printf(" TOTAL                            Omega = %-15g , omega = %-15g \n",budget_radiation+budget_matter+budget_other,(budget_radiation+budget_matter+budget_other)*pba->h*pba->h);
@@ -3004,4 +3146,22 @@ double ddV_scf(
                struct background *pba,
                double phi) {
   return ddV_e_scf(pba,phi)*V_p_scf(pba,phi) + 2*dV_e_scf(pba,phi)*dV_p_scf(pba,phi) + V_e_scf(pba,phi)*ddV_p_scf(pba,phi);
+}
+
+/**
+ * Quintom potential functions
+ * V(phi) = V0 exp( -lambda * phi) 
+ * This potential belongs to the Quintessence field (scf) in Quintom model.
+ * This way we don't need to touch the original CLASS's scf model
+ */
+double V_qtm(struct background *pba, double phi) {
+  return exp(pba->logV0_qtm - pba->lambda_qtm * phi);
+}
+
+double dV_qtm(struct background *pba, double phi) {
+  return -pba->lambda_qtm * V_qtm(pba, phi);
+}
+
+double ddV_qtm(struct background *pba, double phi) {
+  return pba->lambda_qtm * pba->lambda_qtm * V_qtm(pba, phi);
 }

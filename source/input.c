@@ -534,6 +534,9 @@ int input_shooting(struct file_content * pfc,
                                        "Omega_dcdmdr",
                                        "omega_dcdmdr",
                                        "Omega_scf",
+                                       "Omega_qtm",
+                                       "omega_b",
+                                       "omega_cdm",
                                        "Omega_ini_dcdm",
                                        "omega_ini_dcdm"};
 
@@ -544,6 +547,9 @@ int input_shooting(struct file_content * pfc,
                                         "Omega_ini_dcdm",           /* unknown param for target 'Omega_dcdmd' */
                                         "omega_ini_dcdm",           /* unknown param for target 'omega_dcdmdr' */
                                         "scf_shooting_parameter",   /* unknown param for target 'Omega_scf' */
+                                        "logV0_qtm",                /* unknown param for target 'Omega_qtm' */
+                                        "Kb_qtm",                   /* unknown param for target 'omega_b' */
+                                        "Kcdm_qtm",                 /* unknown param for target 'omega_cdm' */
                                         "Omega_dcdmdr",             /* unknown param for target 'Omega_ini_dcdm' */
                                         "omega_dcdmdr"};             /* unknown param for target 'omega_ini_dcdm' */
 
@@ -556,6 +562,9 @@ int input_shooting(struct file_content * pfc,
                                         cs_background,     /* computation stage for target 'Omega_dcdmdr' */
                                         cs_background,     /* computation stage for target 'omega_dcdmdr' */
                                         cs_background,     /* computation stage for target 'Omega_scf' */
+                                        cs_background,     /* computation stage for target 'Omega_qtm' */
+                                        cs_background,     /* computation stage for target 'omega_b' */
+                                        cs_background,     /* computation stage for target 'omega_cdm' */
                                         cs_background,     /* computation stage for target 'Omega_ini_dcdm' */
                                         cs_background};     /* computation stage for target 'omega_ini_dcdm' */
 
@@ -872,15 +881,32 @@ int input_needs_shooting_for_target(struct file_content * pfc,
                                     int * needs_shooting,
                                     ErrorMsg errmsg){
 
+  int flag1;
+  char string1[_ARGUMENT_LENGTH_MAX_];
   *needs_shooting = _TRUE_;
   switch (target_name){
   case Omega_dcdmdr:
   case omega_dcdmdr:
   case Omega_scf:
+  case Omega_qtm:
   case Omega_ini_dcdm:
   case omega_ini_dcdm:
     /* Check that Omega's or omega's are nonzero: */
     if (target_value == 0.)
+      *needs_shooting = _FALSE_;
+    break;
+  case omega_b_qtm:
+    class_call(
+        parser_read_string(pfc, "coupled_baryon_qtm", &string1, &flag1, errmsg),
+        errmsg, errmsg);
+    if (flag1 == _TRUE_ && (string1[0] == 'n' || string1[0] == 'N'))
+      *needs_shooting = _FALSE_;
+    break;
+  case omega_cdm_qtm:
+    class_call(
+        parser_read_string(pfc, "coupled_cdm_qtm", &string1, &flag1, errmsg),
+        errmsg, errmsg);
+    if (flag1 == _TRUE_ && (string1[0] == 'n' || string1[0] == 'N'))
       *needs_shooting = _FALSE_;
     break;
   default:
@@ -1231,6 +1257,21 @@ int input_get_guess(double *xguess,
       xguess[index_guess] = pfzw->target_value[index_guess]/ba.h/ba.h/a_decay;
       dxdy[index_guess] = 1./a_decay/ba.h/ba.h;
       break;
+    case Omega_qtm:
+      /* V0 ~ Omega_qtm * H0^2. So logV0 ~ log(Omega_qtm * H0^2). */
+      xguess[index_guess] = log(ba.Omega0_qtm * ba.H0 * ba.H0);
+      dxdy[index_guess] = 1.0 / ba.Omega0_qtm;
+      break;
+    case omega_b_qtm:
+      /* Kb ~ Omega_b * H0^2 = omega_b / h^2 * H0^2. */
+      xguess[index_guess] = (pfzw->target_value[index_guess] / ba.h / ba.h) * ba.H0 * ba.H0;
+      dxdy[index_guess] = (1.0 / ba.h / ba.h) * ba.H0 * ba.H0;
+      break;
+    case omega_cdm_qtm:
+      /* Kcdm ~ Omega_cdm * H0^2 = omega_cdm / h^2 * H0^2. */
+      xguess[index_guess] = (pfzw->target_value[index_guess] / ba.h / ba.h) * ba.H0 * ba.H0;
+      dxdy[index_guess] = (1.0 / ba.h / ba.h) * ba.H0 * ba.H0;
+      break;
     case Omega_scf:
       /* *
        * This guess is arbitrary, something nice using WKB should be implemented.
@@ -1480,6 +1521,15 @@ int input_try_unknown_parameters(double * unknown_parameter,
     case Omega_scf:
       /** In case scalar field is used to fill, pba->Omega0_scf is not equal to pfzw->target_value[i].*/
       output[i] = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_scf]/(ba.H0*ba.H0)-ba.Omega0_scf;
+      break;
+    case Omega_qtm:
+      output[i] = ba.background_table[(ba.bt_size - 1) * ba.bg_size + ba.index_bg_rho_qtm] / (ba.H0 * ba.H0) - ba.Omega0_qtm;
+      break;
+    case omega_b_qtm:
+      output[i] = ba.background_table[(ba.bt_size - 1) * ba.bg_size + ba.index_bg_rho_b] / (ba.H0 * ba.H0) - pfzw->target_value[i] / ba.h / ba.h;
+      break;
+    case omega_cdm_qtm:
+      output[i] = ba.background_table[(ba.bt_size - 1) * ba.bg_size + ba.index_bg_rho_cdm] / (ba.H0 * ba.H0) - pfzw->target_value[i] / ba.h / ba.h;
       break;
     case Omega_ini_dcdm:
     case omega_ini_dcdm:
@@ -2356,8 +2406,8 @@ int input_read_parameters_species(struct file_content * pfc,
   /** Summary: */
 
   /** - Define local variables */
-  int flag1, flag2, flag3;
-  double param1, param2, param3;
+  int flag1, flag2, flag3, f4_qtm;
+  double param1, param2, param3, p4_qtm;
   char string1[_ARGUMENT_LENGTH_MAX_];
   int fileentries;
   int N_ncdm=0, n, entries_read;
@@ -3200,13 +3250,18 @@ int input_read_parameters_species(struct file_content * pfc,
   class_call(parser_read_double(pfc,"Omega_scf",&param3,&flag3,errmsg),
              errmsg,
              errmsg);
+
+  class_call(parser_read_double(pfc, "Omega_qtm", &p4_qtm, &f4_qtm, errmsg),
+             errmsg, 
+             errmsg);
+
   /* Test */
-  class_test((flag1 == _TRUE_) && (flag2 == _TRUE_) && ((flag3 == _FALSE_) || (param3 >= 0.)),
+  class_test((flag1 == _TRUE_) && (flag2 == _TRUE_) && ((flag3 == _FALSE_) || (param3 >= 0.)) && ((f4_qtm == _FALSE_) || (p4_qtm >= 0.)),
              errmsg,
-             "'Omega_Lambda' or 'Omega_fld' must be left unspecified, except if 'Omega_scf' is set and < 0.");
-  class_test(((flag1 == _FALSE_)||(flag2 == _FALSE_)) && ((flag3 == _TRUE_) && (param3 < 0.)),
+             "'Omega_Lambda' or 'Omega_fld' must be left unspecified, except if 'Omega_scf' or 'Omega_qtm' is set and < 0.");
+  class_test(((flag1 == _FALSE_) || (flag2 == _FALSE_)) && (((flag3 == _TRUE_) && (param3 < 0.)) || ((f4_qtm == _TRUE_) && (p4_qtm < 0.))),
              errmsg,
-             "You have entered 'Omega_scf' < 0 , so you have to specify both 'Omega_lambda' and 'Omega_fld'.");
+             "You have entered 'Omega_scf' < 0 or 'Omega_qtm' < 0, so you have to specify both 'Omega_lambda' and 'Omega_fld'.");
   /* Complete set of parameters
      Case of (flag3 == _FALSE_) || (param3 >= 0.) means that either we have not
      read Omega_scf so we are ignoring it (unlike lambda and fld!) OR we have
@@ -3239,6 +3294,10 @@ int input_read_parameters_species(struct file_content * pfc,
     pba->Omega0_scf = param3;
     Omega_tot += pba->Omega0_scf;
   }
+  if ((f4_qtm == _TRUE_) && (p4_qtm >= 0.)) {
+    pba->Omega0_qtm = p4_qtm;
+    Omega_tot += pba->Omega0_qtm;
+  }
   /* Step 2 */
   if (flag1 == _FALSE_) {
     /* Fill with Lambda */
@@ -3259,6 +3318,13 @@ int input_read_parameters_species(struct file_content * pfc,
     pba->Omega0_scf = 1. - pba->Omega0_k - Omega_tot;
     if (input_verbose > 0){
       printf(" -> matched budget equations by adjusting Omega_scf = %g\n",pba->Omega0_scf);
+    }
+  } 
+  else if ((f4_qtm == _TRUE_) && (p4_qtm < 0.)) {
+    /* Fill up with Quintom */
+    pba->Omega0_qtm = 1. - pba->Omega0_k - Omega_tot;
+    if (input_verbose > 0) {
+      printf(" -> matched budget equations by adjusting Omega_qtm = %g\n", pba->Omega0_qtm);
     }
   }
 
@@ -3370,6 +3436,18 @@ int input_read_parameters_species(struct file_content * pfc,
     if ((fabs(scf_lambda) < 3.)&&(pba->background_verbose>1)){
       printf("'scf_lambda' = %e < 3 won't be tracking (for exp quint) unless overwritten by tuning function.",scf_lambda);
     }
+  }
+
+  /* Quintom model */
+  if (pba->Omega0_qtm != 0.) {
+    pba->has_qtm = _TRUE_;
+    class_read_double("lambda_qtm", pba->lambda_qtm);
+    class_read_double("delta_qtm", pba->delta_qtm);
+    class_read_flag("coupled_baryon_qtm", pba->coupled_baryon_qtm);
+    class_read_flag("coupled_cdm_qtm", pba->coupled_cdm_qtm);
+    class_read_double("logV0_qtm", pba->logV0_qtm);
+    class_read_double("Kb_qtm", pba->Kb_qtm);
+    class_read_double("Kcdm_qtm", pba->Kcdm_qtm);
   }
 
   return _SUCCESS_;
@@ -5928,6 +6006,17 @@ int input_default_params(struct background *pba,
   pba->phi_prime_ini_scf = 1;          //     factors of the radiation attractor values
   /** 9.b.3) Tuning parameter */
   pba->scf_tuning_index = 0;
+
+  /** 9.c) Quintom model */
+  pba->has_qtm = _FALSE_;
+  pba->Omega0_qtm = 0.;
+  pba->lambda_qtm = 1.0;
+  pba->delta_qtm = 0.0;
+  pba->logV0_qtm = 0.0;
+  pba->Kb_qtm = 0.0;
+  pba->Kcdm_qtm = 0.0;
+  pba->coupled_baryon_qtm = _FALSE_;
+  pba->coupled_cdm_qtm = _FALSE_;
 
   /**
    * Deafult to input_read_parameters_heating

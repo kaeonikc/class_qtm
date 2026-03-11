@@ -123,8 +123,17 @@ struct background
   enum varconst_dependence varconst_dep; /**< dependence of the varying fundamental constants as a function of time */
   double varconst_transition_redshift; /**< redshift of transition between varied fundamental constants and normal fundamental constants in the 'varconst_instant' case*/
 
-  //@}
+  /* Quintom parameters */
+  double Omega0_qtm;        /**< \f$ \Omega_{0 qtm} \f$: Quintom dark energy */
+  double lambda_qtm;        /**< slope of quintessence potential */
+  double delta_qtm;         /**< matter-phantom coupling constant */
+  double logV0_qtm;         /**< log of potential amplitude */
+  double Kb_qtm;            /**< baryon scaling constant */
+  double Kcdm_qtm;          /**< CDM scaling constant */
+  short coupled_baryon_qtm; /**< whether baryons are coupled to phantom field */
+  short coupled_cdm_qtm;    /**< whether CDM are coupled to phantom field */
 
+  //@}
 
   /** @name - related parameters */
 
@@ -182,8 +191,23 @@ struct background
   int index_bg_p_scf;         /**< scalar field pressure */
   int index_bg_p_prime_scf;         /**< scalar field pressure */
 
-  int index_bg_rho_ncdm1;     /**< density of first ncdm species (others contiguous) */
-  int index_bg_p_ncdm1;       /**< pressure of first ncdm species (others contiguous) */
+  /* Quintom background indices */
+  int index_bg_phi_qtm;         /**< quintessence field value */
+  int index_bg_phi_prime_qtm;   /**< quintessence field derivative */
+  int index_bg_sigma_qtm;       /**< phantom field value */
+  int index_bg_sigma_prime_qtm; /**< phantom field derivative */
+  int index_bg_V_qtm;           /**< quintessence potential V */
+  int index_bg_dV_qtm;          /**< potential derivative V,phi */
+  int index_bg_ddV_qtm;         /**< potential second derivative V,phiphi */
+  int index_bg_rho_phi_qtm;     /**< quintessence energy density */
+  int index_bg_p_phi_qtm;       /**< quintessence pressure */
+  int index_bg_rho_sigma_qtm;   /**< phantom energy density */
+  int index_bg_p_sigma_qtm;     /**< phantom pressure */
+  int index_bg_rho_qtm;         /**< total quintom energy density */
+  int index_bg_p_qtm;           /**< total quintom pressure */
+
+  int index_bg_rho_ncdm1;	  /**< density of first ncdm species (others contiguous) */
+  int index_bg_p_ncdm1;		  /**< pressure of first ncdm species (others contiguous) */
   int index_bg_pseudo_p_ncdm1;/**< another statistical momentum useful in ncdma approximation */
 
   int index_bg_rho_tot;       /**< Total density */
@@ -258,6 +282,12 @@ struct background
   int index_bi_phi_scf;       /**< {B} scalar field value */
   int index_bi_phi_prime_scf; /**< {B} scalar field derivative wrt conformal time */
 
+  /* Quintom integration indices */
+  int index_bi_phi_qtm;         /**< {B} quintessence field */
+  int index_bi_phi_prime_qtm;   /**< {B} quintessence field derivative */
+  int index_bi_sigma_qtm;       /**< {B} phantom field */
+  int index_bi_sigma_prime_qtm; /**< {B} phantom field derivative */
+
   int index_bi_time;    /**< {C} proper (cosmological) time in Mpc */
   int index_bi_rs;      /**< {C} sound horizon */
   int index_bi_tau;     /**< {C} conformal time in Mpc */
@@ -284,6 +314,7 @@ struct background
   short has_dcdm;      /**< presence of decaying cold dark matter? */
   short has_dr;        /**< presence of relativistic decay radiation? */
   short has_scf;       /**< presence of a scalar field? */
+  short has_qtm;       /**< presence of quintom model? */
   short has_ncdm;      /**< presence of non-cold dark matter? */
   short has_lambda;    /**< presence of cosmological constant? */
   short has_fld;       /**< presence of fluid with constant w and cs2? */
