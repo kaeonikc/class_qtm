@@ -125,6 +125,8 @@ struct background
 
   /* Quintom parameters */
   double Omega0_qtm;        /**< \f$ \Omega_{0 qtm} \f$: Quintom dark energy */
+  double rho0_qtm;          /**< today's quintom energy density */
+  double p0_qtm;            /**< today's quintom pressure */
   double lambda_qtm;        /**< slope of quintessence potential */
   double delta_qtm;         /**< matter-phantom coupling constant */
   double logV0_qtm;         /**< log of potential amplitude */

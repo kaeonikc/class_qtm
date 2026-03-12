@@ -108,6 +108,31 @@ cdef extern from "class.h":
         double H_eq
         double z_eq
         double tau_eq
+        #-- quintom model --
+        double Omega0_qtm
+        double rho0_qtm
+        double p0_qtm
+        double lambda_qtm
+        double delta_qtm
+        double logV0_qtm
+        double Kb_qtm
+        double Kcdm_qtm
+        short coupled_baryon_qtm
+        short coupled_cdm_qtm
+        short has_qtm
+        int index_bg_phi_qtm
+        int index_bg_phi_prime_qtm
+        int index_bg_sigma_qtm
+        int index_bg_sigma_prime_qtm
+        int index_bg_V_qtm
+        int index_bg_dV_qtm
+        int index_bg_ddV_qtm
+        int index_bg_rho_phi_qtm
+        int index_bg_p_phi_qtm
+        int index_bg_rho_sigma_qtm
+        int index_bg_p_sigma_qtm
+        int index_bg_rho_qtm
+        int index_bg_p_qtm
 
     cdef struct thermodynamics:
         short is_allocated

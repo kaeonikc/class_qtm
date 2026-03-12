@@ -163,6 +163,47 @@ cdef class Class:
     def Omega_fld(self):
       """Return the fractional fluid density today"""
       return CallableFloat(self.ba.Omega0_fld)
+    #-- Quintom model --
+    @property
+    def Omega_qtm(self):
+        """Return the fractional Quintom density today"""
+        return CallableFloat(self.ba.Omega0_qtm)
+    @property
+    def lambda_qtm(self):
+        """Return the lambda parameter of Quintom model"""
+        return CallableFloat(self.ba.lambda_qtm)
+    @property
+    def delta_qtm(self):
+        """Return the delta parameter of Quintom model"""
+        return CallableFloat(self.ba.delta_qtm)
+    @property
+    def logV0_qtm(self):
+        """Return the logV0 parameter of Quintom model"""
+        return CallableFloat(self.ba.logV0_qtm)
+    @property
+    def Kb_qtm(self):
+        """Return the Kb parameter of Quintom model"""
+        return CallableFloat(self.ba.Kb_qtm)
+    @property
+    def Kcdm_qtm(self):
+        """Return the Kcdm parameter of Quintom model"""
+        return CallableFloat(self.ba.Kcdm_qtm)
+    @property
+    def w_qtm(self):
+        """Return the w parameter of Quintom model"""
+        if self.ba.rho0_qtm != 0:
+            return CallableFloat(self.ba.p0_qtm/self.ba.rho0_qtm)
+        else:
+            return -1.0
+    @property
+    def p0_qtm(self):
+        """Return the p0 parameter of Quintom model"""
+        return CallableFloat(self.ba.p0_qtm)
+    @property
+    def rho0_qtm(self):
+        """Return the rho0 parameter of Quintom model"""
+        return CallableFloat(self.ba.rho0_qtm)
+    #-- End Quintom model --
 
     # Other properties related to the background
     @property
@@ -3562,6 +3603,21 @@ cdef class Class:
                 value = self.ba.Omega0_lambda
             elif name == 'Omega0_fld':
                 value = self.ba.Omega0_fld
+            elif name == 'Omega_qtm':
+                value = self.ba.Omega0_qtm
+            elif name == 'logV0_qtm':
+                value = self.ba.logV0_qtm
+            elif name == 'Kb_qtm':
+                value = self.ba.Kb_qtm
+            elif name == 'Kcdm_qtm':
+                value = self.ba.Kcdm_qtm
+            elif name == 'lambda_qtm':
+                value = self.ba.lambda_qtm
+            elif name == 'w_qtm':
+                if self.ba.Omega0_qtm != 0:
+                    value = self.ba.p0_qtm / self.ba.Omega0_qtm # Today's w
+                else:
+                    value = -1.0
             elif name == 'age':
                 value = self.ba.age
             elif name == 'conformal_age':

@@ -2170,6 +2170,11 @@ int background_solve(
   pba->Omega0_r = pba->background_table[(pba->bt_size-1)*pba->bg_size+pba->index_bg_Omega_r];
   pba->Omega0_de = 1. - (pba->Omega0_m + pba->Omega0_r + pba->Omega0_k);
 
+  if (pba->has_qtm == _TRUE_) {
+    pba->rho0_qtm = pba->background_table[(pba->bt_size-1)*pba->bg_size+pba->index_bg_rho_qtm];
+    pba->p0_qtm = pba->background_table[(pba->bt_size-1)*pba->bg_size+pba->index_bg_p_qtm];
+  }
+
   /* Compute the density fraction of non-free-streaming matter (in the minimal LambdaCDM model, this would be just Omega_b + Omega_cdm). This definition takes into account interating, decaying and warm dark matter, but it would need to be refined if some part of the matter component was modelled by the fluid (fld) or the scalar field (scf). */
   pba->Omega0_nfsm =  pba->Omega0_b;
   if (pba->has_cdm == _TRUE_)
