@@ -52,11 +52,15 @@
                errmsg);                                                         \
     if (flag_temp == _TRUE_){                                                   \
       if (string_begins_with(string_temp,'y')                                   \
-         || string_begins_with(string_temp,'Y') ){                              \
+         || string_begins_with(string_temp,'Y')                                 \
+         || string_begins_with(string_temp,'t')                                 \
+         || string_begins_with(string_temp,'T') ){                              \
         destination = _TRUE_;                                                   \
       }                                                                         \
       else if (string_begins_with(string_temp,'n')                              \
-         || string_begins_with(string_temp,'N') ){                              \
+         || string_begins_with(string_temp,'N')                                 \
+         || string_begins_with(string_temp,'f')                                 \
+         || string_begins_with(string_temp,'F') ){                              \
         destination = _FALSE_;                                                  \
       }                                                                         \
       else {                                                                    \
@@ -81,11 +85,15 @@
     /* Compatibility code END */                                                \
     if (flag_temp == _TRUE_){                                                   \
       if (string_begins_with(string_temp,'y')                                   \
-         || string_begins_with(string_temp,'Y') ){                              \
+         || string_begins_with(string_temp,'Y')                                 \
+         || string_begins_with(string_temp,'t')                                 \
+         || string_begins_with(string_temp,'T') ){                              \
         destination = _TRUE_;                                                   \
       }                                                                         \
       else if (string_begins_with(string_temp,'n')                              \
-         || string_begins_with(string_temp,'N') ){                              \
+         || string_begins_with(string_temp,'N')                                 \
+         || string_begins_with(string_temp,'f')                                 \
+         || string_begins_with(string_temp,'F') ){                              \
         destination = _FALSE_;                                                  \
       }                                                                         \
       else {                                                                    \

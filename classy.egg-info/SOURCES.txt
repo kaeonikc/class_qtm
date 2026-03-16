@@ -5,11 +5,14 @@ README.md
 __init__.py
 pyproject.toml
 setup.py
+verify_qtm_classy.py
 ./CLASS_rename.py
 ./CPU.py
 ./Makefile
 ./__init__.py
 ./setup.py
+./verify_qtm_classy.py
+./external/.DS_Store
 ./external/HMcode/hmcode.c
 ./external/HMcode/hmcode.h
 ./external/Halofit/halofit.c
@@ -97,6 +100,7 @@ setup.py
 ./include/transfer.h
 ./include/trigonometric_integrals.h
 ./main/class.c
+./python/.DS_Store
 ./python/README
 ./python/cclassy.pxd
 ./python/classy.cpp
@@ -135,6 +139,7 @@ classy.egg-info/SOURCES.txt
 classy.egg-info/dependency_links.txt
 classy.egg-info/not-zip-safe
 classy.egg-info/top_level.txt
+external/.DS_Store
 external/HMcode/hmcode.c
 external/HMcode/hmcode.h
 external/Halofit/halofit.c
@@ -222,6 +227,7 @@ include/thermodynamics.h
 include/transfer.h
 include/trigonometric_integrals.h
 main/class.c
+python/.DS_Store
 python/README
 python/cclassy.pxd
 python/classy.cpp
