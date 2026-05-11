@@ -17,3 +17,5 @@ doc/manual/latex
 modeling/
 verify_qtm_classy.py
 classy.egg-info/
+implement_quintom.md
+implement_quintom_thai.md
