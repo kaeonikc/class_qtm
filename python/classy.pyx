@@ -3614,8 +3614,8 @@ cdef class Class:
             elif name == 'lambda_qtm':
                 value = self.ba.lambda_qtm
             elif name == 'w_qtm':
-                if self.ba.Omega0_qtm != 0:
-                    value = self.ba.p0_qtm / self.ba.Omega0_qtm # Today's w
+                if self.ba.rho0_qtm != 0:
+                    value = self.ba.p0_qtm / self.ba.rho0_qtm # Today's w
                 else:
                     value = -1.0
             elif name == 'age':
