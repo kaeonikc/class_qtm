@@ -896,18 +896,20 @@ int input_needs_shooting_for_target(struct file_content * pfc,
       *needs_shooting = _FALSE_;
     break;
   case omega_b_qtm:
+    *needs_shooting = _FALSE_;
     class_call(
         parser_read_string(pfc, "coupled_baryon_qtm", &string1, &flag1, errmsg),
         errmsg, errmsg);
-    if (flag1 == _TRUE_ && (string1[0] == 'n' || string1[0] == 'N'))
-      *needs_shooting = _FALSE_;
+    if (flag1 == _TRUE_ && (string1[0] == 'y' || string1[0] == 'Y' || string1[0] == 't' || string1[0] == 'T'))
+      *needs_shooting = _TRUE_;
     break;
   case omega_cdm_qtm:
+    *needs_shooting = _FALSE_;
     class_call(
         parser_read_string(pfc, "coupled_cdm_qtm", &string1, &flag1, errmsg),
         errmsg, errmsg);
-    if (flag1 == _TRUE_ && (string1[0] == 'n' || string1[0] == 'N'))
-      *needs_shooting = _FALSE_;
+    if (flag1 == _TRUE_ && (string1[0] == 'y' || string1[0] == 'Y' || string1[0] == 't' || string1[0] == 'T'))
+      *needs_shooting = _TRUE_;
     break;
   default:
     /* Default is no additional checks */
